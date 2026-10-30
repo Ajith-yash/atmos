@@ -1,0 +1,111 @@
+/* ==========================================================================
+   Atmos — Responsive Breakpoints & Mobile Bottom Navigation (responsive.css)
+   ========================================================================== */
+.mobile-bottom-nav {
+  display: none;
+}
+
+@media (max-width: 1200px) {
+  .top-workspace-grid,
+  .bottom-workspace-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .forecast-strip {
+    display: flex;
+    overflow-x: auto;
+    padding-bottom: 8px;
+  }
+
+  .forecast-strip .weather-hero-card {
+    min-width: 250px;
+    flex-shrink: 0;
+  }
+
+  .forecast-strip .forecast-mini-card {
+    min-width: 105px;
+    flex-shrink: 0;
+  }
+
+  .details-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .aqi-top-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 860px) {
+  body {
+    padding: 10px 10px 84px;
+  }
+
+  .atmos-shell {
+    padding: 18px 16px 26px;
+    border-radius: 26px;
+  }
+
+  .search-wrapper {
+    order: 3;
+    max-width: 100%;
+    flex-basis: 100%;
+  }
+
+  .details-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .analytics-grid,
+  .alerts-settings-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pollutants-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .footer-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mobile-bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(16, 16, 20, 0.95);
+    backdrop-filter: blur(14px);
+    border-top: 1px solid var(--border-subtle);
+    z-index: 1500;
+    justify-content: space-around;
+    padding: 8px 6px 12px;
+  }
+
+  .mobile-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    padding: 6px 12px;
+    border-radius: 14px;
+  }
+
+  .mobile-nav-item.active {
+    color: var(--accent-blue);
+    font-weight: 600;
+  }
+}
+
+@media (max-width: 520px) {
+  .footer-grid {
+    grid-template-columns: 1fr;
+  }
+  .map-promo-card {
+    width: 180px;
+    padding: 12px;
+  }
+}

@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#101014" />
+  <meta name="description" content="Atmos — Modern Dark Weather Dashboard & Progressive Web App powered by free, keyless Open-Meteo APIs." />
+  <title>Atmos — Advanced Weather Dashboard &amp; PWA</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="assets/icons/icon-192.svg" />
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- Modular Atmos Stylesheets -->
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/dashboard.css" />
+  <link rel="stylesheet" href="css/components.css" />
+  <link rel="stylesheet" href="css/responsive.css" />
+  <link rel="stylesheet" href="css/animations.css" />
+</head>
+<body>
+
+  <!-- Offline / Cached Data Notification Banner -->
+  <div id="offlineStatusBanner" style="display:none;max-width:1420px;margin:0 auto 14px;background:#25252A;border:1px solid #B9DDF2;color:#FFFFFF;padding:10px 18px;border-radius:18px;align-items:center;justify-content:space-between;gap:12px;font-size:0.82rem;"></div>
+
+  <!-- Main Atmos Rounded Dashboard Container -->
+  <main class="atmos-shell" id="homeSectionAnchor">
+    <!-- 1. DASHBOARD HEADER -->
+    <header class="atmos-header">
+      <div class="header-left">
+        <button type="button" class="brand-btn" id="atmosBrandBtn" title="Atmos Dashboard Home">
+          <span class="brand-icon-circle">
+            <i data-lucide="layout-grid" style="width:16px;height:16px;"></i>
+          </span>
+          <span>Atmos</span>
+        </button>
+
+        <button type="button" class="icon-circle-btn" id="headerAlertsBtn" title="Weather Alerts & Telemetry Notifications">
+          <i data-lucide="bell" style="width:18px;height:18px;"></i>
+          <span class="badge-dot"></span>
+        </button>
+
+        <div class="current-loc-pill">
+          <i data-lucide="map-pin" style="width:17px;height:17px;"></i>
+          <span id="headerLocationText">Chennai, India</span>
+        </div>
+
+        <button type="button" class="icon-circle-btn" id="gpsLocationBtn" title="Use Browser GPS Geolocation">
+          <i data-lucide="locate-fixed" style="width:18px;height:18px;"></i>
+        </button>
+      </div>
+
+      <!-- Central City Search Bar (Open-Meteo Geocoding API) -->
+      <div class="search-wrapper">
+        <div class="search-box">
+          <i data-lucide="search" style="width:17px;height:17px;color:var(--text-muted);flex-shrink:0;"></i>
+          <input type="text" id="citySearchInput" placeholder="Search city..." autocomplete="off" aria-label="Search city" />
+          <button type="button" id="clearSearchBtn" style="display:none;color:var(--text-muted);font-size:1.1rem;line-height:1;" title="Clear search">&times;</button>
+        </div>
+        <div id="searchDropdown" class="search-dropdown hidden"></div>
+      </div>
+
+      <!-- Right Controls: Theme Toggle Pill + Profile / Settings -->
+      <div class="header-right">
+        <div class="theme-switch-pill" role="group" aria-label="Theme Switcher">
+          <button type="button" class="theme-opt-btn" id="themeLightBtn" title="Light Theme">
+            <i data-lucide="sun" style="width:16px;height:16px;"></i>
+          </button>
+          <button type="button" class="theme-opt-btn active" id="themeDarkBtn" title="Dark Theme">
+            <i data-lucide="moon" style="width:16px;height:16px;"></i>
+          </button>
+        </div>
+
+        <button type="button" class="icon-circle-btn" id="headerProfileSettingsBtn" title="User Preferences & Settings">
+          <i data-lucide="sliders-horizontal" style="width:18px;height:18px;"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- 2. TOP WORKSPACE: FORECAST STRIP + CHANCE OF RAIN -->
+    <section class="top-workspace-grid" id="forecastSectionAnchor">
+      <!-- Left Column: Forecast Tabs + Pale-Blue Hero Card + 6 Mini Forecast Cards -->
+      <div>
+        <div class="subheader-row">
+          <div class="forecast-tabs" role="tablist">
+            <button type="button" class="forecast-tab-btn" data-forecast-tab="today">Today</button>
+            <button type="button" class="forecast-tab-btn" data-forecast-tab="tomorrow">Tomorrow</button>
+            <button type="button" class="forecast-tab-btn active" data-forecast-tab="next7">Next 7 days</button>
+          </div>
+
+          <div class="mode-pill-switch">
+            <button type="button" class="mode-pill-btn active" id="modeForecastBtn">Forecast</button>
+            <button type="button" class="mode-pill-btn" id="modeAqiBtn">Air quality</button>
+          </div>
+        </div>
+
+        <div class="forecast-strip" id="forecastStripContainer">
+          <!-- Populated dynamically by AtmosApp.renderForecastStrip() with live Open-Meteo data -->
+        </div>
+      </div>
+
+      <!-- Right Column: Chance of Rain Vertical Pill Bars -->
+      <div class="chance-rain-panel">
+        <div class="section-title-row">
+          <h2 class="section-title">Chance of rain</h2>
+          <button type="button" data-scroll-target="analyticsSection" style="font-size:0.78rem;color:var(--accent-blue);font-weight:600;">Full charts &rarr;</button>
+        </div>
+
+        <div class="rain-bars-card">
+          <div class="rain-chart-grid">
+            <div class="rain-y-labels">
+              <span>Rainy</span>
+              <span>Sunny</span>
+              <span>Heavy</span>
+            </div>
+            <div class="rain-Right-columns" id="chanceOfRainBars">
+              <!-- Populated dynamically from Open-Meteo hourly precipitation_probability -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. MIDDLE WORKSPACE: INTERACTIVE GLOBAL MAP + OTHER LARGE CITIES -->
+    <section class="bottom-workspace-grid" id="bottomWorkspaceGrid">
+      <!-- Left Column: Interactive Leaflet.js + OpenStreetMap -->
+      <div id="mapSectionAnchor">
+        <div class="section-title-row">
+          <h2 class="section-title">Global map</h2>
+          <button type="button" id="viewWideMapBtn" style="background:var(--card-bg);border:1px solid var(--border-subtle);padding:6px 16px;border-radius:999px;font-size:0.8rem;color:var(--text-muted);">View wide</button>
+        </div>
+
+        <div class="global-map-wrapper">
+          <div id="weatherLeafletMap"></div>
+
+          <!-- Top-Left World Reset Button + Coordinates Badge -->
+          <button type="button" class="map-ctrl-btn" id="mapResetWorldBtn" style="top:16px;left:16px;" title="Reset Global View">
+            <i data-lucide="rotate-ccw" style="width:16px;height:16px;"></i>
+          </button>
+          <div class="map-coords-pill" id="mapCoordsDisplay">Lat 13.08° • Lon 80.27°</div>
+
+          <!-- Top-Right Recenter on Active City -->
+          <button type="button" class="map-ctrl-btn" id="mapRecenterBtn" style="top:16px;right:16px;" title="Center on Selected City">
+            <i data-lucide="layers" style="width:16px;height:16px;"></i>
+          </button>
+
+          <!-- Right-Side Custom Zoom Controls (+ / - / Compass) -->
+          <button type="button" class="map-ctrl-btn" id="mapZoomInBtn" style="bottom:116px;right:16px;" title="Zoom In">
+            <i data-lucide="plus" style="width:17px;height:17px;"></i>
+          </button>
+          <button type="button" class="map-ctrl-btn" id="mapZoomOutBtn" style="bottom:68px;right:16px;" title="Zoom Out">
+            <i data-lucide="minus" style="width:17px;height:17px;"></i>
+          </button>
+
+          <!-- Bottom-Left Floating Promo Overlay Card matching reference screenshot -->
+          <div class="map-promo-card" id="mapPromoCard">
+            <div class="map-promo-title">Explore global map of wind, weather and oceans condition</div>
+            <img class="map-promo-img" src="assets/images/storm-map-preview.jpg" alt="Climate and Weather Conditions Visual Reference" />
+            <button type="button" class="map-promo-btn" id="mapPromoStartBtn">Get started</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Other Large Cities / Favourite Cities -->
+      <div id="citiesSectionAnchor">
+        <div class="section-title-row">
+          <h2 class="section-title">Other large cities</h2>
+          <button type="button" id="addCurrentCityFavBtn" style="background:var(--card-bg);border:1px solid var(--border-subtle);padding:5px 12px;border-radius:999px;font-size:0.76rem;color:var(--accent-blue);font-weight:600;">+ Add Current</button>
+        </div>
+
+        <div class="other-cities-list" id="otherCitiesContainer">
+          <!-- Populated dynamically by AtmosFavorites -->
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. DETAILED WEATHER METRICS (10 CARDS) -->
+    <section class="details-section" id="weatherDetailsSection">
+      <div class="section-title-row">
+        <h2 class="section-title">Weather details</h2>
+        <span style="font-size:0.78rem;color:var(--text-muted);">Live Open-Meteo Telemetry</span>
+      </div>
+
+      <div class="details-grid">
+        <div class="detail-metric-card">
+          <div class="detail-metric-top"><span>Sunrise</span><i data-lucide="sunrise" style="width:16px;height:16px;color:var(--accent-blue);"></i></div>
+          <div class="detail-metric-val" id="detSunrise">--:--</div>
+          <div class="detail-metric-sub">Local solar horizon</div>
+        </div>
+        <div class="detail-metric-card">
+          <div class="detail-metric-top"><span>Sunset</span><i data-lucide="sunset" style="width:16px;height:16px;color:var(--accent-blue);"></i></div>
+          <div class="detail-metric-val" id="detSunset">--:--</div>
+          <div class="detail-metric-sub">Evening twilight</div>
+        </div>
+        <div class="detail-metric-card">
+          <div class="detail-metric-top"><span>UV Index</span><i data-lucide="sun-dim" style="width:16px;height:16px;color:var(--accent-blue);"></i></div>
+          <div class="detail-metric-val" id="detUvIndex">--</div>
+          <div class="detail-metric-sub" id="detUvSub">Peak daily UV</div>
+        </div>
+        <div class="detail-metric-card">
+          <div class="detail-metric-top"><span>Humidity</span><i data-lucide="droplets" style="width:16px;height:16px;color:var(--accent-blue);"></i></div>
+          <div class="detail-metric-val" id="detHumidity">--%</div>
+          <div class="detail-metric-sub" id="detHumiditySub">2m relative humidity</div>
+        </div>
+        <div class="detail-metric-card">
+          <div class="detail-metric-top"><span>Visibility</span><i data-lucide="eye" style="width:16px;height:16px;color:var(--accent-blue);"></i></div>
+          <div class="detail-metric-val" id="detVisibility">-- km</div>
+          <div class="detail-metric-sub" id="detVisibilitySub">Atmospheric clarity</div>
+        </div>
+        <div class="detail-metric-card">
+          <div class="detail-metric-top"><span>Wind Speed</span><i data-lucide="wind" style="width:16px;height:16px;color:var(--accent-blue);"></i></div>
+          <div class="detail-metric-val" id="detWindSpeed">--</div>
+          <div class="detail-metric-sub" id="detWindSub">10m anemometer</div>
+        </div>
+        <div class="detail-metric-card">
+          <div class="detail-metric-top"><span>Wind Direction</span><i data-lucide="compass" style="width:16px;height:16px;color:var(--accent-blue);"></i></div>
+          <div class="detail-metric-val" id="detWindDir">--</div>
+          <div class="detail-metric-sub">Meteorological azimuth</div>
+        </div>
+        <div class="detail-metric-card">
+          <div class="detail-metric-top"><span>Atmospheric Pressure</span><i data-lucide="gauge" style="width:16px;height:16px;color:var(--accent-blue);"></i></div>
+          <div class="detail-metric-val" id="detPressure">-- hPa</div>
+          <div class="detail-metric-sub">Surface barometric</div>
+        </div>
+        <div class="detail-metric-card">
+          <div class="detail-metric-top"><span>Precipitation</span><i data-lucide="cloud-rain" style="width:16px;height:16px;color:var(--accent-blue);"></i></div>
+          <div class="detail-metric-val" id="detPrecip">-- mm</div>
+          <div class="detail-metric-sub" id="detPrecipSub">Current rainfall</div>
+        </div>
+        <div class="detail-metric-card">
+          <div class="detail-metric-top"><span>Feels-Like Temp</span><i data-lucide="thermometer" style="width:16px;height:16px;color:var(--accent-blue);"></i></div>
+          <div class="detail-metric-val" id="detFeelsLike">--°</div>
+          <div class="detail-metric-sub">Apparent temperature</div>
+        </div>
+      </div>
+
+      <!-- Uploaded Climate & Weather Iconography Reference Card -->
+      <div style="margin-top:16px;background:var(--card-bg);border:1px solid var(--border-subtle);border-radius:24px;padding:18px 22px;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:240px;">
+          <div style="font-size:0.76rem;color:var(--accent-blue);font-weight:700;letter-spacing:0.04em;margin-bottom:4px;">CLIMATE &amp; METEOROLOGICAL VISUAL LEGEND</div>
+          <h3 style="font-size:1.02rem;font-weight:700;margin-bottom:6px;">24-Condition Climate &amp; Weather Iconography</h3>
+          <p style="font-size:0.82rem;color:var(--text-muted);line-height:1.5;">
+            Integrated visual reference covering Temperature, Sun, Rain, Wind, Rainbow, Celsius/Fahrenheit, Flooding, Storm, Sunny, Fog, Seasonal shifts (Spring, Summer, Fall, Winter), Snow, Sunrise, Sunset, Humidity, Night, Tornado, and Climate telemetry.
+          </p>
+        </div>
+        <div style="background:#FFFFFF;padding:8px;border-radius:18px;max-width:340px;flex-shrink:0;">
+          <img src="assets/images/storm-map-preview.jpg" alt="Weather and Climate Icons Legend" style="width:100%;height:auto;display:block;border-radius:12px;" />
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. WEATHER ANALYTICS STUDIO (4 CHART.JS GRAPHS) -->
+    <section class="analytics-section" id="analyticsSection">
+      <div class="section-title-row">
+        <h2 class="section-title">Weather analytics (24-hour trends)</h2>
+        <span style="font-size:0.78rem;color:var(--text-muted);">Powered by Chart.js &amp; Open-Meteo Hourly API</span>
+      </div>
+
+      <div class="analytics-grid">
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <span class="chart-card-title">1. Temperature &amp; Feels-Like Curve</span>
+            <span class="chart-card-badge">Next 24h</span>
+          </div>
+          <div class="chart-canvas-box">
+            <canvas id="tempAnalyticsChart"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <span class="chart-card-title">2. Rain Probability Chart</span>
+            <span class="chart-card-badge">Precipitation %</span>
+          </div>
+          <div class="chart-canvas-box">
+            <canvas id="rainAnalyticsChart"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <span class="chart-card-title">3. Relative Humidity Chart</span>
+            <span class="chart-card-badge">2m Humidity %</span>
+          </div>
+          <div class="chart-canvas-box">
+            <canvas id="humidityAnalyticsChart"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <span class="chart-card-title">4. Wind Speed Chart</span>
+            <span class="chart-card-badge">10m Surface Wind</span>
+          </div>
+          <div class="chart-canvas-box">
+            <canvas id="windAnalyticsChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. AIR QUALITY DASHBOARD (OPEN-METEO AIR QUALITY API) -->
+    <section class="aqi-section" id="airQualitySection">
+      <div class="section-title-row">
+        <div>
+          <h2 class="section-title">Air quality dashboard</h2>
+          <div id="aqiStandardLabel" style="font-size:0.78rem;color:var(--text-muted);margin-top:2px;">US EPA AQI Standard</div>
+        </div>
+        <div class="mode-pill-switch">
+          <button type="button" class="mode-pill-btn active" id="aqiSwitchUsBtn">US AQI</button>
+          <button type="button" class="mode-pill-btn" id="aqiSwitchEuBtn">European AQI</button>
+        </div>
+      </div>
+
+      <div class="aqi-container-card">
+        <div class="aqi-top-grid">
+          <div class="aqi-score-box">
+            <div class="aqi-number-row">
+              <div>
+                <div style="font-size:0.76rem;color:var(--text-muted);font-weight:600;margin-bottom:4px;">CURRENT AIR QUALITY INDEX</div>
+                <div class="aqi-big-number" id="aqiPrimaryScore">--</div>
+              </div>
+              <span class="aqi-cat-pill" id="aqiCategoryPill">Loading</span>
+            </div>
+            <p id="aqiCategoryExplanation" style="font-size:0.8rem;color:var(--text-muted);line-height:1.45;">
+              Fetching real-time atmospheric pollutant readings from Open-Meteo Air Quality API...
+            </p>
+          </div>
+
+          <div class="pollutants-grid">
+            <div class="pollutant-card">
+              <span class="pollutant-name">PM2.5 (Fine Particles)</span>
+              <span class="pollutant-val" id="pm25Val">--</span>
+              <span class="pollutant-unit">&mu;g/m&sup3;</span>
+            </div>
+            <div class="pollutant-card">
+              <span class="pollutant-name">PM10 (Coarse Dust)</span>
+              <span class="pollutant-val" id="pm10Val">--</span>
+              <span class="pollutant-unit">&mu;g/m&sup3;</span>
+            </div>
+            <div class="pollutant-card">
+              <span class="pollutant-name">Carbon Monoxide (CO)</span>
+              <span class="pollutant-val" id="coVal">--</span>
+              <span class="pollutant-unit">&mu;g/m&sup3;</span>
+            </div>
+            <div class="pollutant-card">
+              <span class="pollutant-name">Nitrogen Dioxide (NO&#8322;)</span>
+              <span class="pollutant-val" id="no2Val">--</span>
+              <span class="pollutant-unit">&mu;g/m&sup3;</span>
+            </div>
+            <div class="pollutant-card">
+              <span class="pollutant-name">Ozone (O&#8323;)</span>
+              <span class="pollutant-val" id="o3Val">--</span>
+              <span class="pollutant-unit">&mu;g/m&sup3;</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. WEATHER ALERTS & SETTINGS SECTION -->
+    <section class="alerts-settings-grid" id="alertsSettingsSection">
+      <!-- Weather Alerts Card -->
+      <div class="panel-card">
+        <div class="section-title-row">
+          <h2 class="section-title">Weather alerts &amp; advisories</h2>
+          <i data-lucide="shield-alert" style="width:18px;height:18px;color:var(--accent-blue);"></i>
+        </div>
+        <div id="weatherAlertsContent">
+          <!-- Populated by AtmosAlerts.renderAlerts() -->
+        </div>
+      </div>
+
+      <!-- User Settings Card -->
+      <div class="panel-card" id="settingsSectionAnchor">
+        <div class="section-title-row">
+          <h2 class="section-title">Application settings</h2>
+          <i data-lucide="settings" style="width:18px;height:18px;color:var(--accent-blue);"></i>
+        </div>
+
+        <div class="settings-row">
+          <div>
+            <div style="font-weight:600;font-size:0.88rem;">Appearance Theme</div>
+            <div style="font-size:0.76rem;color:var(--text-muted);">Switch between Dark (#101014) and Light mode</div>
+          </div>
+          <select id="settingThemeSelect" aria-label="Appearance Theme" style="background:var(--card-secondary);padding:8px 14px;border-radius:12px;font-size:0.84rem;font-weight:600;">
+            <option value="dark">Dark Theme</option>
+            <option value="light">Light Theme</option>
+          </select>
+        </div>
+
+        <div class="settings-row">
+          <div>
+            <div style="font-weight:600;font-size:0.88rem;">Temperature Unit</div>
+            <div style="font-size:0.76rem;color:var(--text-muted);">Switch between Celsius (&deg;C) and Fahrenheit (&deg;F)</div>
+          </div>
+          <select id="settingTempUnit" aria-label="Temperature Unit" style="background:var(--card-secondary);padding:8px 14px;border-radius:12px;font-size:0.84rem;font-weight:600;">
+            <option value="celsius">Celsius (&deg;C)</option>
+            <option value="fahrenheit">Fahrenheit (&deg;F)</option>
+          </select>
+        </div>
+
+        <div class="settings-row">
+          <div>
+            <div style="font-weight:600;font-size:0.88rem;">Wind Speed Unit</div>
+            <div style="font-size:0.76rem;color:var(--text-muted);">Kilometres per hour (km/h) or miles per hour (mph)</div>
+          </div>
+          <select id="settingWindUnit" aria-label="Wind Speed Unit" style="background:var(--card-secondary);padding:8px 14px;border-radius:12px;font-size:0.84rem;font-weight:600;">
+            <option value="kmh">km/h</option>
+            <option value="mph">mph</option>
+          </select>
+        </div>
+
+        <div class="settings-row">
+          <div>
+            <div style="font-weight:600;font-size:0.88rem;">Air Quality Standard</div>
+            <div style="font-size:0.76rem;color:var(--text-muted);">Choose default AQI scale</div>
+          </div>
+          <select id="settingAqiStandard" aria-label="AQI Standard" style="background:var(--card-secondary);padding:8px 14px;border-radius:12px;font-size:0.84rem;font-weight:600;">
+            <option value="us">US EPA AQI</option>
+            <option value="eu">European EAQI</option>
+          </select>
+        </div>
+
+        <div class="settings-row">
+          <div>
+            <div style="font-weight:600;font-size:0.88rem;">Time Format</div>
+            <div style="font-size:0.76rem;color:var(--text-muted);">12-hour AM/PM or 24-hour clock</div>
+          </div>
+          <select id="settingTimeFormat" aria-label="Time Format" style="background:var(--card-secondary);padding:8px 14px;border-radius:12px;font-size:0.84rem;font-weight:600;">
+            <option value="12h">12-Hour (AM/PM)</option>
+            <option value="24h">24-Hour</option>
+          </select>
+        </div>
+
+        <div class="settings-row">
+          <div>
+            <div style="font-weight:600;font-size:0.88rem;">Reset Local Storage</div>
+            <div style="font-size:0.76rem;color:var(--text-muted);">Clear saved cities, cached weather, and preferences</div>
+          </div>
+          <button type="button" id="clearStorageBtn" style="background:rgba(239,68,68,0.18);color:#FCA5A5;padding:8px 14px;border-radius:12px;font-size:0.8rem;font-weight:600;">
+            Clear Data
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. ELEGANT 4-COLUMN FOOTER (SECTION 16) -->
+    <footer class="atmos-footer">
+      <div class="footer-grid">
+        <div>
+          <h3 class="footer-col-title">Quick Links</h3>
+          <ul class="footer-links">
+            <li><button type="button" data-scroll-target="homeSectionAnchor">Home</button></li>
+            <li><button type="button" data-scroll-target="forecastSectionAnchor">Forecast</button></li>
+            <li><button type="button" data-scroll-target="mapSectionAnchor">Weather Map</button></li>
+            <li><button type="button" data-scroll-target="airQualitySection">Air Quality</button></li>
+            <li><button type="button" data-scroll-target="settingsSectionAnchor">Settings</button></li>
+            <li><button type="button" id="footerAboutBtn">About</button></li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 class="footer-col-title">Contact</h3>
+          <ul class="footer-links">
+            <li><a href="mailto:ajityashofficial@gmail.com">Email: ajityashofficial@gmail.com</a></li>
+            <li style="font-size:0.8rem;color:var(--text-muted);margin-top:6px;">Keyless Open-Meteo Telemetry Architecture</li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 class="footer-col-title">Social Links</h3>
+          <ul class="footer-links">
+            <li><a href="https://github.com/Ajith-yash" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+            <li><a href="https://www.linkedin.com/in/ajith-yash-undefined-775838447/" target="_blank" rel="noopener noreferrer">LinkedIn</a></li>
+            <li><a href="https://www.instagram.com/ajith_yash12/" target="_blank" rel="noopener noreferrer">Instagram</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 class="footer-col-title">Downloads</h3>
+          <ul class="footer-links">
+            <li><button type="button" id="installPwaBtn">Install Atmos (PWA)</button></li>
+            <li><button type="button" id="exportCsvBtn">Export weather report as CSV</button></li>
+            <li><button type="button" id="downloadProjectZipBtn">Download project ZIP</button></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div>
+          <strong>Designed &amp; Developed by Ajith Yash.</strong> Atmos &copy; 2026. All rights reserved.
+        </div>
+        <div>
+          Weather &amp; Air Quality data by <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer" style="color:var(--accent-blue);">Open-Meteo.com</a> (CC BY 4.0) &bull; Map tiles &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" style="color:var(--accent-blue);">OpenStreetMap</a> contributors
+        </div>
+      </div>
+    </footer>
+  </main>
+
+  <!-- 9. FIXED MOBILE BOTTOM NAVIGATION BAR (SECTION 14) -->
+  <nav class="mobile-bottom-nav" aria-label="Mobile Navigation">
+    <button type="button" class="mobile-nav-item active" data-scroll-target="homeSectionAnchor">
+      <i data-lucide="home" style="width:18px;height:18px;"></i>
+      <span>Home</span>
+    </button>
+    <button type="button" class="mobile-nav-item" data-scroll-target="forecastSectionAnchor">
+      <i data-lucide="calendar-days" style="width:18px;height:18px;"></i>
+      <span>Forecast</span>
+    </button>
+    <button type="button" class="mobile-nav-item" data-scroll-target="mapSectionAnchor">
+      <i data-lucide="map" style="width:18px;height:18px;"></i>
+      <span>Map</span>
+    </button>
+    <button type="button" class="mobile-nav-item" data-scroll-target="citiesSectionAnchor">
+      <i data-lucide="building-2" style="width:18px;height:18px;"></i>
+      <span>Cities</span>
+    </button>
+    <button type="button" class="mobile-nav-item" data-scroll-target="settingsSectionAnchor">
+      <i data-lucide="settings" style="width:18px;height:18px;"></i>
+      <span>Settings</span>
+    </button>
+  </nav>
+
+  <!-- In-Page Modal Dialog -->
+  <div id="atmosModalBackdrop" class="atmos-modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="atmos-modal">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <h3 id="atmosModalTitle" style="font-size:1.05rem;font-weight:700;">Atmos</h3>
+        <button type="button" id="atmosModalCloseBtn" style="font-size:1.3rem;color:var(--text-muted);line-height:1;">&times;</button>
+      </div>
+      <div id="atmosModalBody"></div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="atmosToast" class="atmos-toast hidden" role="status" aria-live="polite"></div>
+
+  <!-- External Libraries -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://unpkg.com/lucide@0.395.0/dist/umd/lucide.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <!-- Modular Atmos Scripts -->
+  <script src="js/storage.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/geocoding.js"></script>
+  <script src="js/location.js"></script>
+  <script src="js/forecast.js"></script>
+  <script src="js/weather-map.js"></script>
+  <script src="js/air-quality.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/favorites.js"></script>
+  <script src="js/alerts.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/export.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

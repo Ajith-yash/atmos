@@ -1,0 +1,24 @@
+{
+  "name": "Atmos \u2014 Advanced Weather Dashboard & PWA",
+  "short_name": "Atmos",
+  "description": "Modern dark weather dashboard and Progressive Web App powered by free, keyless Open-Meteo APIs, Leaflet.js, and Chart.js.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#101014",
+  "theme_color": "#101014",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "assets/icons/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/icons/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+/* ==========================================================================
+   Atmos — Subtle Micro-Interactions & Shimmer States (animations.css)
+   ========================================================================== */
+@keyframes pulseGlow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+@keyframes floatSlow {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-4px); }
+}
+
+.weather-svg-anim {
+  animation: floatSlow 4.5s ease-in-out infinite;
+}
+
+.loading-pulse {
+  animation: pulseGlow 1.5s ease-in-out infinite;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(185, 221, 242, 0.4);
+}

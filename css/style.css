@@ -1,0 +1,82 @@
+/* ==========================================================================
+   Atmos — Core Variables, Reset & Typography (style.css)
+   ========================================================================== */
+:root {
+  --page-bg: #292929;
+  --dashboard-bg: #101014;
+  --card-bg: #1C1C20;
+  --card-secondary: #25252A;
+  --accent-blue: #B9DDF2;
+  --accent-secondary: #8CC8EC;
+  --accent-dark-text: #101014;
+  --text-main: #FFFFFF;
+  --text-muted: #A1A1AA;
+  --border-subtle: rgba(255, 255, 255, 0.07);
+  --shadow-dashboard: 0 28px 70px rgba(0, 0, 0, 0.65);
+  --shadow-card: 0 10px 28px rgba(0, 0, 0, 0.28);
+  --radius-dashboard: 34px;
+  --radius-card: 24px;
+  --radius-pill: 9999px;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+body.theme-light {
+  --page-bg: #DCE4EC;
+  --dashboard-bg: #F4F7FA;
+  --card-bg: #FFFFFF;
+  --card-secondary: #E9EFF5;
+  --accent-blue: #8CC8EC;
+  --accent-secondary: #4FA3D8;
+  --accent-dark-text: #0D131A;
+  --text-main: #111827;
+  --text-muted: #525B6C;
+  --border-subtle: rgba(17, 24, 39, 0.09);
+  --shadow-dashboard: 0 20px 50px rgba(15, 23, 42, 0.12);
+  --shadow-card: 0 8px 20px rgba(15, 23, 42, 0.06);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--page-bg);
+  color: var(--text-main);
+  min-height: 100vh;
+  padding: 24px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+button, input, select {
+  font-family: inherit;
+  color: inherit;
+  border: none;
+  outline: none;
+  background: none;
+}
+
+button {
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
